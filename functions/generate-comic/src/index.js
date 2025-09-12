@@ -1,106 +1,97 @@
-const { GoogleGenAI, Type } = require("@google/genai");
 
-/*
-  Appwrite function's entry point.
-  It expects a JSON payload with a 'type' field ('script' or 'image')
-  and a 'prompt' field.
-*/
+
+const { GoogleGenAI, Type } = require('@google/genai');
+
 module.exports = async (req, res) => {
-  // Validate Appwrite's environment variables.
-  if (!process.env.GEMINI_API_KEY) {
-    return res.json({
-      success: false,
-      error: "GEMINI_API_KEY environment variable not set in Appwrite function.",
-    }, 500);
+  // --- 1. VALIDATION ---
+  // FIX: Per guidelines, API key must come from process.env.API_KEY
+  if (!process.env.API_KEY) {
+    console.error("FATAL ERROR: API_KEY is not set in function variables.");
+    return res.json({ success: false, error: 'Server configuration error.' }, 500);
   }
 
-  // Parse request payload
   let payload;
   try {
     payload = JSON.parse(req.payload);
   } catch (e) {
-    return res.json({ success: false, error: "Invalid JSON payload." }, 400);
+    console.error("Error parsing request payload:", req.payload);
+    return res.json({ success: false, error: 'Invalid request format.' }, 400);
   }
 
-  const { type, prompt } = payload;
-
-  if (!type || !prompt) {
-    return res.json({ success: false, error: "Missing 'type' or 'prompt' in payload." }, 400);
+  if (!payload.type || !payload.prompt) {
+    return res.json({ success: false, error: 'Missing `type` or `prompt` in request.' }, 400);
   }
+  
+  // --- 2. INITIALIZE GEMINI CLIENT ---
+  // FIX: Per guidelines, API key must come from process.env.API_KEY
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
-  // SCRIPT GENERATION LOGIC
-  const generateScript = async () => {
-    const comicScriptSchema = {
+  // --- 3. HANDLE REQUEST BASED ON TYPE ---
+  try {
+    if (payload.type === 'script') {
+      // --- SCRIPT GENERATION ---
+      const comicScriptSchema = {
         type: Type.ARRAY,
         items: {
-            type: Type.OBJECT,
-            properties: {
-                panel_number: { type: Type.NUMBER },
-                scene_description: { type: Type.STRING },
-                dialogue: { type: Type.STRING },
-                image_prompt: { type: Type.STRING },
-            },
-            required: ['panel_number', 'scene_description', 'dialogue', 'image_prompt'],
+          type: Type.OBJECT,
+          properties: {
+            panel_number: { type: Type.INTEGER, description: "The sequential number of the comic panel (1, 2, 3, etc.)." },
+            scene_description: { type: Type.STRING, description: "A vivid, one-sentence description of the scene and action." },
+            dialogue: { type: Type.STRING, description: "Short, natural dialogue or narration for the panel. Can be an empty string if there is no speech." },
+            image_prompt: { type: Type.STRING, description: "A detailed text-to-image prompt to generate the art for this panel in a consistent comic book style." },
+          },
+          required: ["panel_number", "scene_description", "dialogue", "image_prompt"],
         },
-    };
-      
-    const fullPrompt = `
-      You are an expert comic script writer. Your task is to take a user's idea and craft a complete, short comic story with a clear beginning, middle, and a satisfying conclusion. The story should feature at least two characters interacting.
-      The user's idea is: "${prompt}".
-      Generate a JSON array of 4 to 6 panel objects for this story. Each object must have the following properties:
-      - "panel_number": The panel number, starting from 1.
-      - "scene_description": A short, vivid description of the scene's setting, character actions, and expressions.
-      - "dialogue": A brief line of dialogue for a character, or narration. If multiple characters speak, ensure it's clear who is saying what (e.g., "Zorp: We're not alone!"). Keep dialogue concise to fit in a speech bubble.
-      - "image_prompt": A detailed, descriptive prompt for an AI image generator. Start with "Vibrant comic book art, manga style," and describe the scene, characters (with consistent descriptions), emotions, and colors. Clearly define character appearances so they can be consistent across panels. For example: 'Zorp, a small green alien with three eyes and a silver space suit' and 'Captain Eva, a human astronaut with short red hair and a blue uniform'.
-      Ensure the output is a valid JSON array and nothing else. The story must feel complete and have a conclusion within the 4-6 panels.
-    `;
+      };
 
-    const response = await ai.models.generateContent({
+      const SCRIPT_GENERATION_PROMPT = `
+        You are an expert comic book writer.
+        Based on the user's idea, create a complete, short comic strip story with 4-6 panels, a clear beginning, middle, and a satisfying conclusion. The story must feature multiple characters.
+        For each panel, provide a JSON object with the panel number, a scene description, dialogue, and a highly detailed image prompt.
+        Ensure character descriptions in the image prompts are consistent across all panels.
+        The user's idea is: "${payload.prompt}"
+      `;
+
+      const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
-        contents: fullPrompt,
+        contents: SCRIPT_GENERATION_PROMPT,
         config: {
-            responseMimeType: "application/json",
-            responseSchema: comicScriptSchema,
+          responseMimeType: "application/json",
+          responseSchema: comicScriptSchema,
         },
-    });
-    
-    const jsonText = response.text.trim();
-    return JSON.parse(jsonText);
-  };
+      });
+      
+      // FIX: Added a try-catch block for JSON parsing to handle potential non-JSON responses from the API.
+      try {
+        const parsedJson = JSON.parse(response.text);
+        return res.json({ success: true, data: parsedJson });
+      } catch (parseError) {
+        console.error("Failed to parse JSON response from Gemini:", response.text, parseError);
+        throw new Error("Received an invalid format from the content generation API.");
+      }
 
-  // IMAGE GENERATION LOGIC
-  const generateImage = async () => {
-    const response = await ai.models.generateImages({
+    } else if (payload.type === 'image') {
+      // --- IMAGE GENERATION ---
+      const response = await ai.models.generateImages({
         model: 'imagen-4.0-generate-001',
-        prompt: prompt,
+        prompt: payload.prompt,
         config: {
-            numberOfImages: 1,
-            outputMimeType: 'image/png',
-            aspectRatio: '1:1',
+          numberOfImages: 1,
+          outputMimeType: 'image/jpeg',
+          aspectRatio: '1:1',
         },
-    });
-    
-    if (response.generatedImages && response.generatedImages.length > 0) {
-        const base64ImageBytes = response.generatedImages[0].image.imageBytes;
-        return `data:image/png;base64,${base64ImageBytes}`;
-    }
-    throw new Error("No image was generated by the API.");
-  };
+      });
 
-  try {
-    let result;
-    if (type === 'script') {
-      result = await generateScript();
-    } else if (type === 'image') {
-      result = await generateImage();
+      const base64Image = response.generatedImages[0].image.imageBytes;
+      const dataUrl = `data:image/jpeg;base64,${base64Image}`;
+      return res.json({ success: true, data: dataUrl });
+
     } else {
-      return res.json({ success: false, error: "Invalid 'type'. Must be 'script' or 'image'." }, 400);
+      return res.json({ success: false, error: 'Invalid request type.' }, 400);
     }
-    return res.json({ success: true, data: result });
   } catch (error) {
-    console.error(`Error processing type '${type}':`, error);
-    return res.json({ success: false, error: error.message || "An internal server error occurred." }, 500);
+    console.error(`Error processing '${payload.type}' request:`, error);
+    const errorMessage = error instanceof Error ? error.message : `An error occurred while generating the ${payload.type}.`;
+    return res.json({ success: false, error: errorMessage }, 500);
   }
 };

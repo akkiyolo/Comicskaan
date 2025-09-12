@@ -1,95 +1,112 @@
-import { Client, Account, Functions } from 'appwrite';
+// FIX: Removed 'Method' from appwrite import as it is not an exported member.
+import { Client, Account, Functions, ID } from 'appwrite';
 import { ComicPanelData } from '../types';
 
-// --- Appwrite Configuration ---
-const APPWRITE_PROJECT_ID = '68c457dd00313b94f0a8';
+// Use the project ID from your Appwrite project dashboard.
+const APPWRITE_PROJECT_ID = '68c4034300117d0d9f52'; 
 const APPWRITE_ENDPOINT = 'https://cloud.appwrite.io/v1';
-const APPWRITE_FUNCTION_ID = 'generate-comic';
-// -----------------------------
+const FUNCTION_ID = 'generate-comic';
 
-// Lazy initialization for the Appwrite client and session
-let appwrite: { client: Client; account: Account; functions: Functions } | null = null;
-let sessionPromise: Promise<void> | null = null;
+// Initialize the Appwrite client
+const client = new Client()
+    .setEndpoint(APPWRITE_ENDPOINT)
+    .setProject(APPWRITE_PROJECT_ID);
 
-const getAppwrite = () => {
-    // If the client hasn't been created, create it now.
-    if (!appwrite) {
-        const client = new Client();
-        client
-            .setEndpoint(APPWRITE_ENDPOINT)
-            .setProject(APPWRITE_PROJECT_ID);
+const account = new Account(client);
+const functions = new Functions(client);
 
-        const account = new Account(client);
-        const functions = new Functions(client);
-        appwrite = { client, account, functions };
-    }
-    return appwrite;
-};
-
-const ensureSession = () => {
-    // If a session promise doesn't exist, create one.
-    if (!sessionPromise) {
-        sessionPromise = (async () => {
-            const { account } = getAppwrite();
-            try {
-                // Check if a session already exists
-                await account.get();
-            } catch (err) {
-                // If no session, create a new anonymous one
-                await account.createAnonymousSession();
-            }
-        })();
-    }
-    return sessionPromise;
-};
-
-
-// Helper to call the Appwrite function
-const callAppwriteFunction = async (payload: object) => {
-    // Ensure both Appwrite client and session are ready before making a call.
-    await ensureSession();
-    const { functions } = getAppwrite();
-
+// This function ensures we have an active session to call the function.
+const getSession = async () => {
     try {
-        const result = await functions.createExecution(
-            APPWRITE_FUNCTION_ID,
-            JSON.stringify(payload),
-            false // sync execution
-        );
-        
-        if (result.status === 'completed') {
-            const response = JSON.parse(result.responseBody);
-            if (response.success) {
-                return response.data;
-            } else {
-                throw new Error(response.error || 'Function execution failed.');
-            }
-        } else {
-            throw new Error(`Function execution failed with status: ${result.status}. Response: ${result.responseBody}`);
-        }
+        // Check if a session already exists
+        await account.get();
     } catch (error) {
-        console.error("Appwrite function call failed:", error);
-        throw new Error("Failed to communicate with the AI service.");
+        // If no session, create an anonymous one
+        await account.createAnonymousSession();
     }
 };
 
-export const generateComicScript = async (userPrompt: string): Promise<ComicPanelData[]> => {
-    const payload = { type: 'script', prompt: userPrompt };
-    const scriptData = await callAppwriteFunction(payload);
+/**
+ * Generates a comic script by calling the secure Appwrite backend function.
+ * @param storyIdea The user's prompt for the comic story.
+ * @returns A promise that resolves to an array of comic panel data.
+ */
+export const generateComicScript = async (storyIdea: string): Promise<ComicPanelData[]> => {
+    await getSession(); // Ensure we are logged in
     
-    if (!Array.isArray(scriptData) || scriptData.length === 0) {
-        throw new Error("AI returned an invalid script format.");
+    const payload = {
+        type: 'script',
+        prompt: storyIdea,
+    };
+
+    try {
+        // FIX: The `method` argument is optional and defaults to 'POST'. Removing it to fix the ExecutionMethod type error.
+        const result = await functions.createExecution(
+            FUNCTION_ID,
+            JSON.stringify(payload),
+            false, // sync execution
+            '/' // path
+        );
+
+        if (result.responseStatusCode !== 200) {
+            const errorResponse = JSON.parse(result.responseBody);
+            throw new Error(errorResponse.error || `Function execution failed with status: ${result.responseStatusCode}`);
+        }
+        
+        const responseBody = JSON.parse(result.responseBody);
+
+        if (!responseBody.success) {
+            throw new Error(responseBody.error || 'The backend function returned an error.');
+        }
+
+        return responseBody.data;
+
+    } catch (error) {
+        console.error("Error executing generateComicScript function:", error);
+        if (error instanceof Error && error.message.includes('network')) {
+             throw new Error("Network error. Please check your Appwrite project's Platform settings (CORS).");
+        }
+        throw error;
     }
-    return scriptData;
 };
 
-export const generatePanelImage = async (imagePrompt: string): Promise<string> => {
+/**
+ * Generates an image for a comic panel by calling the secure Appwrite backend function.
+ * @param prompt The detailed prompt for the image.
+ * @returns A promise that resolves to a base64 data URL of the generated image.
+ */
+export const generatePanelImage = async (prompt: string): Promise<string> => {
+    await getSession(); // Ensure we are logged in
+
+    const payload = {
+        type: 'image',
+        prompt: prompt,
+    };
+    
     try {
-        const payload = { type: 'image', prompt: imagePrompt };
-        return await callAppwriteFunction(payload);
+        // FIX: The `method` argument is optional and defaults to 'POST'. Removing it to fix the ExecutionMethod type error.
+        const result = await functions.createExecution(
+            FUNCTION_ID,
+            JSON.stringify(payload),
+            false, // sync execution
+            '/' // path
+        );
+
+        if (result.responseStatusCode !== 200) {
+            const errorResponse = JSON.parse(result.responseBody);
+            throw new Error(errorResponse.error || `Function execution failed with status: ${result.responseStatusCode}`);
+        }
+
+        const responseBody = JSON.parse(result.responseBody);
+
+        if (!responseBody.success) {
+            throw new Error(responseBody.error || 'The backend function returned an error.');
+        }
+        
+        return responseBody.data;
+
     } catch (error) {
-        console.error("Error generating panel image via function:", error);
-        // Return a placeholder image on failures to not break the UI
-        return "https://picsum.photos/512/512?blur=2"; 
+        console.error("Error executing generatePanelImage function:", error);
+        throw error;
     }
 };
