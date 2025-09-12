@@ -1,0 +1,69 @@
+/* Set a baseline for consistent behavior across browsers */
+html {
+  scroll-behavior: smooth;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Improve font rendering */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Animation for stars */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+@keyframes glow {
+    0%, 100% { box-shadow: 0 0 5px 2px rgba(0, 255, 255, 0.5); }
+    50% { box-shadow: 0 0 15px 5px rgba(0, 255, 255, 0.8); }
+}
+
+.twinkle {
+  animation: twinkle 4s infinite ease-in-out;
+}
+
+.glow {
+    animation: glow 6s infinite ease-in-out;
+}
+
+
+/* Parallax Star background */
+@keyframes move-twink-back {
+    from {background-position:0 0;}
+    to {background-position:-10000px 5000px;}
+}
+
+#stars, #stars2, #stars3 {
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+  bottom:0;
+  width:100%;
+  height:100%;
+  display:block;
+  z-index: -1;
+}
+
+#stars {
+ background:transparent url(https://www.script-tutorials.com/demos/360/images/stars.png) repeat top center;
+ z-index:-4;
+}
+
+#stars2 {
+ background:transparent url(https://www.script-tutorials.com/demos/360/images/twinkling.png) repeat top center;
+ z-index:-3;
+ animation:move-twink-back 200s linear infinite;
+}
+
+#stars3 {
+ background:transparent url(https://www.script-tutorials.com/demos/360/images/clouds.png) repeat top center;
+ z-index:-2;
+ animation:move-twink-back 100s linear infinite;
+}

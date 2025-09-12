@@ -1,0 +1,29 @@
+{
+    "projectId": "comicskaan",
+    "projectName": "Comicskaan",
+    "functions": [
+        {
+            "$id": "generate-comic",
+            "name": "generate-comic",
+            "runtime": "node-18.0",
+            "execute": [
+                "any"
+            ],
+            "events": [],
+            "schedule": "",
+            "timeout": 60,
+            "enabled": true,
+            "logging": true,
+            "entrypoint": "src/index.js",
+            "commands": "npm install",
+            "ignore": [
+                "node_modules",
+                ".npm"
+            ],
+            "path": "functions/generate-comic",
+            "vars": {
+                "GEMINI_API_KEY": "YOUR_GEMINI_API_KEY_HERE"
+            }
+        }
+    ]
+}
