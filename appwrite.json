@@ -1,11 +1,20 @@
 {
-    "projectId": "comicskaan",
+    "projectId": "68c457dd00313b94f0a8",
     "projectName": "Comicskaan",
+    "sites": [
+        {
+            "$id": "comicskaan-site",
+            "name": "Comicskaan",
+            "buildCommand": "npm run build",
+            "outputDir": "dist",
+            "rootDir": "."
+        }
+    ],
     "functions": [
         {
             "$id": "generate-comic",
             "name": "generate-comic",
-            "runtime": "node-20.0",
+            "runtime": "node-18.0",
             "execute": [
                 "any"
             ],
@@ -22,7 +31,7 @@
             ],
             "path": "functions/generate-comic",
             "vars": {
-                "GEMINI_API_KEY": "AIzaSyDw1Alez6iMOcbX89_PpQOzM-m2sqLVgDU"
+                "GEMINI_API_KEY": ""
             }
         }
     ]
