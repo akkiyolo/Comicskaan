@@ -2,30 +2,40 @@ import { Client, Account, Functions } from 'appwrite';
 import { ComicPanelData } from '../types';
 
 // --- Appwrite Configuration ---
-// The user's project ID is now set directly.
-const APPWRITE_PROJECT_ID = '68b1eced002592417845';
+const APPWRITE_PROJECT_ID = '68c3c39c0033529dd444';
 const APPWRITE_ENDPOINT = 'https://cloud.appwrite.io/v1';
 const APPWRITE_FUNCTION_ID = 'generate-comic';
 // -----------------------------
 
-const client = new Client();
-client
-    .setEndpoint(APPWRITE_ENDPOINT)
-    .setProject(APPWRITE_PROJECT_ID);
-
-const account = new Account(client);
-const functions = new Functions(client);
-
-
-// Lazily create and manage the anonymous user session.
+// Lazy initialization for the Appwrite client and session
+let appwrite: { client: Client; account: Account; functions: Functions } | null = null;
 let sessionPromise: Promise<void> | null = null;
+
+const getAppwrite = () => {
+    // If the client hasn't been created, create it now.
+    if (!appwrite) {
+        const client = new Client();
+        client
+            .setEndpoint(APPWRITE_ENDPOINT)
+            .setProject(APPWRITE_PROJECT_ID);
+
+        const account = new Account(client);
+        const functions = new Functions(client);
+        appwrite = { client, account, functions };
+    }
+    return appwrite;
+};
+
 const ensureSession = () => {
+    // If a session promise doesn't exist, create one.
     if (!sessionPromise) {
         sessionPromise = (async () => {
+            const { account } = getAppwrite();
             try {
+                // Check if a session already exists
                 await account.get();
             } catch (err) {
-                // If no session, create an anonymous one.
+                // If no session, create a new anonymous one
                 await account.createAnonymousSession();
             }
         })();
@@ -36,7 +46,9 @@ const ensureSession = () => {
 
 // Helper to call the Appwrite function
 const callAppwriteFunction = async (payload: object) => {
+    // Ensure both Appwrite client and session are ready before making a call.
     await ensureSession();
+    const { functions } = getAppwrite();
 
     try {
         const result = await functions.createExecution(

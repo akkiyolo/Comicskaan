@@ -13,6 +13,9 @@
     
     <link rel="stylesheet" href="./styles.css">
     
+    <!-- This is the translator that fixes the blank screen -->
+    <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+
     <script type="importmap">
     {
       "imports": {
@@ -38,6 +41,7 @@
 </head>
 <body class="bg-gray-900">
     <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
+    <!-- Changed type to "text/babel" so the translator can find and convert it -->
+    <script type="text/babel" data-type="module" src="./index.tsx"></script>
 </body>
 </html>
