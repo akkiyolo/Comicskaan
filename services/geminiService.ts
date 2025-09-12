@@ -2,7 +2,7 @@ import { Client, Account, Functions } from 'appwrite';
 import { ComicPanelData } from '../types';
 
 // --- Appwrite Configuration ---
-const APPWRITE_PROJECT_ID = '68c41503001aa43c61aa';
+const APPWRITE_PROJECT_ID = '68c457dd00313b94f0a8';
 const APPWRITE_ENDPOINT = 'https://cloud.appwrite.io/v1';
 const APPWRITE_FUNCTION_ID = 'generate-comic';
 // -----------------------------
