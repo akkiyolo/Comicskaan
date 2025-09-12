@@ -31,7 +31,7 @@
             ],
             "path": "functions/generate-comic",
             "vars": {
-                "GEMINI_API_KEY": ""
+                "GEMINI_API_KEY": "AIzaSyDw1Alez6iMOcbX89_PpQOzM-m2sqLVgDU"
             }
         }
     ]
