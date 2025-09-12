@@ -3,7 +3,7 @@ import { ComicPanelData } from '../types';
 
 // --- Appwrite Configuration ---
 // The user's project ID is now set directly.
-const APPWRITE_PROJECT_ID = '68c3c39c0033529dd444';
+const APPWRITE_PROJECT_ID = '68b1eced002592417845';
 const APPWRITE_ENDPOINT = 'https://cloud.appwrite.io/v1';
 const APPWRITE_FUNCTION_ID = 'generate-comic';
 // -----------------------------
