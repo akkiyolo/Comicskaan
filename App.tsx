@@ -3,7 +3,6 @@ import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { ComicViewer } from './components/ComicViewer';
 import { Loader } from './components/Loader';
-import { AnimatedBackground } from './components/AnimatedBackground';
 import { generateComicScript, generatePanelImage } from './services/geminiService';
 import { ComicPanelData } from './types';
 import { SparklesIcon } from './components/icons/SparklesIcon';
@@ -18,7 +17,6 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // We set the body class directly for theme changes
     if (theme === 'dark') {
       document.body.classList.add('bg-gray-900');
       document.body.classList.remove('bg-slate-100');
@@ -72,10 +70,6 @@ const App: React.FC = () => {
     switch (appState) {
       case 'loading-script':
         return <Loader theme={theme} />;
-      // FIX: Show ComicViewer during image generation for better UX and to fix the TS error.
-      // The comparison `appState === 'generating-images'` was always false inside the 'viewing' case.
-      // By showing the viewer for both 'generating-images' and 'viewing', the check becomes meaningful
-      // and the UI provides a better experience, showing panels as they load.
       case 'generating-images':
       case 'viewing':
         return <ComicViewer panels={panels} handleReset={handleReset} isLoading={appState === 'generating-images'} theme={theme} />;
@@ -114,7 +108,13 @@ const App: React.FC = () => {
 
   return (
     <div className={`relative min-h-screen flex flex-col transition-colors duration-500 overflow-x-hidden`}>
-      {theme === 'dark' && <AnimatedBackground />}
+      {theme === 'dark' && (
+        <div className="stars-container fixed top-0 left-0 w-full h-full -z-10">
+            <div className="stars"></div>
+            <div className="stars2"></div>
+            <div className="stars3"></div>
+        </div>
+      )}
       <div className={`relative z-10 flex flex-col items-center justify-center flex-grow p-4 transition-all duration-500 ${theme === 'dark' && appState === 'idle' ? 'backdrop-blur-sm bg-black/30 rounded-xl' : ''}`}>
         <Header theme={theme} toggleTheme={toggleTheme} />
         <main className="w-full flex-grow flex items-center justify-center">

@@ -13,57 +13,54 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Animation for stars */
-@keyframes twinkle {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+/* --- Pure CSS Starfield Animation --- */
+/* This new background has no external dependencies and fixes the mixed-content crash. */
+@keyframes move-up {
+    100% {
+        transform: translateY(-2000px);
+    }
 }
 
-@keyframes glow {
-    0%, 100% { box-shadow: 0 0 5px 2px rgba(0, 255, 255, 0.5); }
-    50% { box-shadow: 0 0 15px 5px rgba(0, 255, 255, 0.8); }
+.stars-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
 }
 
-.twinkle {
-  animation: twinkle 4s infinite ease-in-out;
+.stars, .stars2, .stars3 {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2000px; /* Taller than viewport to allow for upward movement */
+    background-repeat: repeat;
+    animation-name: move-up;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
 }
 
-.glow {
-    animation: glow 6s infinite ease-in-out;
+/* Small stars */
+.stars {
+    background-image: radial-gradient(1px 1px at 10px 20px, white, rgba(255, 255, 255, 0)), radial-gradient(1px 1px at 50px 70px, white, rgba(255, 255, 255, 0)), radial-gradient(1px 1px at 130px 90px, white, rgba(255, 255, 255, 0)), radial-gradient(1px 1px at 200px 150px, white, rgba(255, 255, 255, 0)), radial-gradient(1px 1px at 320px 240px, white, rgba(255, 255, 255, 0)), radial-gradient(1px 1px at 400px 100px, white, rgba(255, 255, 255, 0)), radial-gradient(1px 1px at 480px 300px, white, rgba(255, 255, 255, 0)), radial-gradient(1px 1px at 600px 350px, white, rgba(255, 255, 255, 0));
+    background-size: 600px 400px;
+    animation-duration: 120s;
 }
 
-
-/* Parallax Star background */
-@keyframes move-twink-back {
-    from {background-position:0 0;}
-    to {background-position:-10000px 5000px;}
+/* Medium stars */
+.stars2 {
+    background-image: radial-gradient(2px 2px at 20px 100px, white, rgba(255, 255, 255, 0)), radial-gradient(2px 2px at 150px 220px, white, rgba(255, 255, 255, 0)), radial-gradient(2px 2px at 250px 400px, white, rgba(255, 255, 255, 0)), radial-gradient(2px 2px at 420px 320px, white, rgba(255, 255, 255, 0)), radial-gradient(2px 2px at 550px 50px, white, rgba(255, 255, 255, 0));
+    background-size: 550px 400px;
+    animation-duration: 80s;
+    animation-delay: -30s;
 }
 
-#stars, #stars2, #stars3 {
-  position:absolute;
-  top:0;
-  left:0;
-  right:0;
-  bottom:0;
-  width:100%;
-  height:100%;
-  display:block;
-  z-index: -1;
-}
-
-#stars {
- background:transparent url(https://www.script-tutorials.com/demos/360/images/stars.png) repeat top center;
- z-index:-4;
-}
-
-#stars2 {
- background:transparent url(https://www.script-tutorials.com/demos/360/images/twinkling.png) repeat top center;
- z-index:-3;
- animation:move-twink-back 200s linear infinite;
-}
-
-#stars3 {
- background:transparent url(https://www.script-tutorials.com/demos/360/images/clouds.png) repeat top center;
- z-index:-2;
- animation:move-twink-back 100s linear infinite;
+/* Large stars */
+.stars3 {
+    background-image: radial-gradient(3px 3px at 80px 40px, white, rgba(255, 255, 255, 0)), radial-gradient(3px 3px at 280px 180px, white, rgba(255, 255, 255, 0)), radial-gradient(3px 3px at 500px 300px, white, rgba(255, 255, 255, 0));
+    background-size: 500px 350px;
+    animation-duration: 50s;
+    animation-delay: -60s;
 }
