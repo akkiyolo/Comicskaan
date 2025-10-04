@@ -1,112 +1,91 @@
-// FIX: Removed 'Method' from appwrite import as it is not an exported member.
-import { Client, Account, Functions, ID } from 'appwrite';
+import { GoogleGenAI, Type } from "@google/genai";
 import { ComicPanelData } from '../types';
 
-// Use the project ID from your Appwrite project dashboard.
-const APPWRITE_PROJECT_ID = '68c4034300117d0d9f52'; 
-const APPWRITE_ENDPOINT = 'https://cloud.appwrite.io/v1';
-const FUNCTION_ID = 'generate-comic';
+// Per guidelines, API key must come from process.env.API_KEY
+if (!process.env.API_KEY) {
+  // In a real-world scenario, you'd want to handle this more gracefully,
+  // maybe showing an error message to the user.
+  // For this project, we'll throw an error to make the issue clear during development.
+  throw new Error("FATAL ERROR: API_KEY is not set in environment variables.");
+}
 
-// Initialize the Appwrite client
-const client = new Client()
-    .setEndpoint(APPWRITE_ENDPOINT)
-    .setProject(APPWRITE_PROJECT_ID);
-
-const account = new Account(client);
-const functions = new Functions(client);
-
-// This function ensures we have an active session to call the function.
-const getSession = async () => {
-    try {
-        // Check if a session already exists
-        await account.get();
-    } catch (error) {
-        // If no session, create an anonymous one
-        await account.createAnonymousSession();
-    }
-};
+// Initialize the GoogleGenAI client
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 /**
- * Generates a comic script by calling the secure Appwrite backend function.
+ * Generates a comic script by calling the Gemini API.
  * @param storyIdea The user's prompt for the comic story.
  * @returns A promise that resolves to an array of comic panel data.
  */
 export const generateComicScript = async (storyIdea: string): Promise<ComicPanelData[]> => {
-    await getSession(); // Ensure we are logged in
-    
-    const payload = {
-        type: 'script',
-        prompt: storyIdea,
-    };
+  const comicScriptSchema = {
+    type: Type.ARRAY,
+    items: {
+      type: Type.OBJECT,
+      properties: {
+        panel_number: { type: Type.INTEGER, description: "The sequential number of the comic panel (1, 2, 3, etc.)." },
+        scene_description: { type: Type.STRING, description: "A vivid, one-sentence description of the scene and action." },
+        dialogue: { type: Type.STRING, description: "Short, natural dialogue or narration for the panel. Can be an empty string if there is no speech." },
+        image_prompt: { type: Type.STRING, description: "A detailed text-to-image prompt to generate the art for this panel in a consistent comic book style." },
+      },
+      required: ["panel_number", "scene_description", "dialogue", "image_prompt"],
+    },
+  };
+
+  const SCRIPT_GENERATION_PROMPT = `
+    You are an expert comic book writer.
+    Based on the user's idea, create a complete, short comic strip story with 4-6 panels, a clear beginning, middle, and a satisfying conclusion. The story must feature multiple characters.
+    For each panel, provide a JSON object with the panel number, a scene description, dialogue, and a highly detailed image prompt.
+    Ensure character descriptions in the image prompts are consistent across all panels.
+    The user's idea is: "${storyIdea}"
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: SCRIPT_GENERATION_PROMPT,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: comicScriptSchema,
+      },
+    });
 
     try {
-        // FIX: The `method` argument is optional and defaults to 'POST'. Removing it to fix the ExecutionMethod type error.
-        const result = await functions.createExecution(
-            FUNCTION_ID,
-            JSON.stringify(payload),
-            false, // sync execution
-            '/' // path
-        );
-
-        if (result.responseStatusCode !== 200) {
-            const errorResponse = JSON.parse(result.responseBody);
-            throw new Error(errorResponse.error || `Function execution failed with status: ${result.responseStatusCode}`);
-        }
-        
-        const responseBody = JSON.parse(result.responseBody);
-
-        if (!responseBody.success) {
-            throw new Error(responseBody.error || 'The backend function returned an error.');
-        }
-
-        return responseBody.data;
-
-    } catch (error) {
-        console.error("Error executing generateComicScript function:", error);
-        if (error instanceof Error && error.message.includes('network')) {
-             throw new Error("Network error. Please check your Appwrite project's Platform settings (CORS).");
-        }
-        throw error;
+      const parsedJson = JSON.parse(response.text);
+      return parsedJson;
+    } catch (parseError) {
+      console.error("Failed to parse JSON response from Gemini:", response.text, parseError);
+      throw new Error("Received an invalid format from the content generation API.");
     }
+  } catch (error) {
+    console.error("Error generating comic script:", error);
+    const errorMessage = error instanceof Error ? error.message : "An error occurred while generating the script.";
+    throw new Error(errorMessage);
+  }
 };
 
 /**
- * Generates an image for a comic panel by calling the secure Appwrite backend function.
+ * Generates an image for a comic panel by calling the Gemini API.
  * @param prompt The detailed prompt for the image.
  * @returns A promise that resolves to a base64 data URL of the generated image.
  */
 export const generatePanelImage = async (prompt: string): Promise<string> => {
-    await getSession(); // Ensure we are logged in
+  try {
+    const response = await ai.models.generateImages({
+      model: 'imagen-4.0-generate-001',
+      prompt: prompt,
+      config: {
+        numberOfImages: 1,
+        outputMimeType: 'image/jpeg',
+        aspectRatio: '1:1',
+      },
+    });
 
-    const payload = {
-        type: 'image',
-        prompt: prompt,
-    };
-    
-    try {
-        // FIX: The `method` argument is optional and defaults to 'POST'. Removing it to fix the ExecutionMethod type error.
-        const result = await functions.createExecution(
-            FUNCTION_ID,
-            JSON.stringify(payload),
-            false, // sync execution
-            '/' // path
-        );
-
-        if (result.responseStatusCode !== 200) {
-            const errorResponse = JSON.parse(result.responseBody);
-            throw new Error(errorResponse.error || `Function execution failed with status: ${result.responseStatusCode}`);
-        }
-
-        const responseBody = JSON.parse(result.responseBody);
-
-        if (!responseBody.success) {
-            throw new Error(responseBody.error || 'The backend function returned an error.');
-        }
-        
-        return responseBody.data;
-
-    } catch (error) {
-        console.error("Error executing generatePanelImage function:", error);
-        throw error;
-    }
+    const base64Image = response.generatedImages[0].image.imageBytes;
+    return `data:image/jpeg;base64,${base64Image}`;
+  } catch (error) {
+    console.error("Error generating panel image:", error);
+    const errorMessage = error instanceof Error ? error.message : "An error occurred while generating the image.";
+    throw new Error(errorMessage);
+  }
 };
