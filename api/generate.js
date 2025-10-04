@@ -1,6 +1,7 @@
-const { GoogleGenAI, Type } = require('@google/genai');
+import { GoogleGenAI, Type } from '@google/genai';
 
-module.exports = async (req, res) => {
+// Vercel's runtime will handle this default export as the serverless function.
+export default async function handler(req, res) {
   // Allow POST requests only
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
