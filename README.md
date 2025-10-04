@@ -4,11 +4,12 @@
 
 Comicskaan is a web application that leverages the Google Gemini API to transform a simple text prompt into a complete, visually striking comic strip. It generates a story, writes dialogue, and creates unique, consistent artwork for each panel, offering a seamless and creative experience.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fgoogle-gemini-v2%2Fcomicskaan)
+[![Deploy with Vercel](https://comicskaan.vercel.app/)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fgoogle-gemini-v2%2Fcomicskaan)
 
 ---
 
-![Comicskaan Screenshot](https://storage.googleapis.com/gemini-v2-prompt-gallery-prod/305a4175-9e6a-4934-8c83-09756b3e94a8/comicskaan_screenshot.png)
+<img width="1916" height="968" alt="image" src="https://github.com/user-attachments/assets/41c0a2cb-9868-45dc-ba28-8c38ce60be73" />
+
 
 ## ✨ Core Features
 
